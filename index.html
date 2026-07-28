@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hAI.TermuxStartScript</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid #30363d;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            color: #58a6ff;
+            margin-bottom: 0.5rem;
+        }
+        header p {
+            color: #8b949e;
+            font-size: 1.1rem;
+        }
+        .badges {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+        }
+        .badges img { height: 28px; }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem 0;
+        }
+        .feature {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .feature h3 {
+            color: #58a6ff;
+            margin-bottom: 0.5rem;
+        }
+        .feature p { color: #8b949e; }
+        .section {
+            padding: 2rem 0;
+            border-top: 1px solid #30363d;
+        }
+        .section h2 {
+            color: #c9d1d9;
+            margin-bottom: 1rem;
+        }
+        pre {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            color: #7ee787;
+            font-family: "SF Mono", Consolas, monospace;
+            font-size: 0.9rem;
+        }
+        .menu-tree {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: "SF Mono", Consolas, monospace;
+            font-size: 0.85rem;
+            color: #c9d1d9;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #484f58;
+            border-top: 1px solid #30363d;
+        }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .tag {
+            display: inline-block;
+            background: #1f6feb;
+            color: #fff;
+            padding: 0.15rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin: 0.1rem;
+        }
+        .tag.green { background: #238636; }
+        .tag.purple { background: #8957e5; }
+        .tag.orange { background: #bc4c00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>hAI.TermuxStartScript</h1>
+            <p>Configurable TUI Service Manager for Termux</p>
+            <div class="badges">
+                <img src="https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white" alt="Bash">
+                <img src="https://img.shields.io/badge/Termux-000000?style=flat-square&logo=android&logoColor=white" alt="Termux">
+                <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License">
+                <img src="https://img.shields.io/badge/Platform-Android-green?style=flat-square" alt="Platform">
+                <img src="https://img.shields.io/badge/TUI-dialog-blueviolet?style=flat-square" alt="dialog">
+                <img src="https://img.shields.io/badge/Tunnel-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare">
+            </div>
+        </header>
+
+        <div class="features">
+            <div class="feature">
+                <h3>Service Management</h3>
+                <p>Start, stop, and restart SSH and Cloudflared tunnels via termux-services (sv).</p>
+            </div>
+            <div class="feature">
+                <h3>Token Handling</h3>
+                <p>Paste Cloudflared tokens directly in the terminal — no dialog inputbox issues.</p>
+            </div>
+            <div class="feature">
+                <h3>Apps Menu</h3>
+                <p>Structured access to OSINT, Recon, and Pentest tools with short descriptions.</p>
+            </div>
+            <div class="feature">
+                <h3>Template-Ready</h3>
+                <p>Config block at the top — edit paths and commands for any Termux installation.</p>
+            </div>
+            <div class="feature">
+                <h3>Boot Support</h3>
+                <p>Works with Termux:Boot for auto-start on device boot.</p>
+            </div>
+            <div class="feature">
+                <h3>Status Overview</h3>
+                <p>Real-time status for SSH, Cloudflared, and token storage in one view.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Quick Start</h2>
+<pre>git clone https://github.com/YOUR_USERNAME/hAI.TermuxStartScript.git
+cd hAI.TermuxStartScript
+cp service.sh ~/service.sh
+chmod +x ~/service.sh
+nano ~/service.sh   # Edit CONFIG section
+~/service.sh</pre>
+        </div>
+
+        <div class="section">
+            <h2>Menu Structure</h2>
+            <div class="menu-tree">SSH + Cloudflared (Main Menu)
+├── Status anzeigen
+├── SSH starten / stoppen
+├── Cloudflared starten / stoppen / restart
+├── Cloudflared-Token eingeben / Status
+├── Alles starten
+├── Apps
+│   ├── OSINT
+│   │   ├── Infoooze  — OSINT für Domains, IPs, Usernames, DNS
+│   │   ├── Mr.Holmes — OSINT für Domains, Usernames, Telefonnummern
+│   │   └── ReconDog  — Recon für DNS, Ports, CMS, Subdomains
+│   ├── Frameworks
+│   │   └── Metasploit — modulares Pentest-Framework
+│   ├── Tool-Sammlungen
+│   │   └── DarkFly — Launcher/Installer für Security-Tools
+│   └── Hinweise
+│       ├── Zphisher (nur Info, nicht startbar)
+│       └── Lokales Script starten (Platzhalter)
+└── Beenden</div>
+        </div>
+
+        <div class="section">
+            <h2>Tools</h2>
+            <p>
+                <span class="tag">Infoooze</span>
+                <span class="tag green">Mr.Holmes</span>
+                <span class="tag green">ReconDog</span>
+                <span class="tag purple">Metasploit</span>
+                <span class="tag orange">DarkFly</span>
+                <span class="tag">Zphisher (info only)</span>
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Prerequisites</h2>
+<pre>pkg install dialog termux-services openssh cloudflared
+sv-enable sshd
+sv-enable cloudflared</pre>
+        </div>
+
+        <footer>
+            <p>hAI.TermuxStartScript &mdash; <a href="https://github.com/YOUR_USERNAME/hAI.TermuxStartScript">GitHub Repository</a> &mdash; MIT License</p>
+        </footer>
+    </div>
+</body>
+</html>
