@@ -3,208 +3,653 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>hAI.TermuxStartScript</title>
+    <title>hAI.TermuxStartScript — Configurator</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface-2: #1c2128;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --text-faint: #484f58;
+            --primary: #58a6ff;
+            --primary-hover: #79b8ff;
+            --success: #238636;
+            --success-hover: #2ea043;
+            --orange: #d29922;
+            --purple: #bc8cff;
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+            --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: "SF Mono", "Fira Code", Consolas, monospace;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #0d1117;
-            color: #c9d1d9;
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
             line-height: 1.6;
             min-height: 100vh;
         }
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
         header {
             text-align: center;
-            padding: 3rem 0;
-            border-bottom: 1px solid #30363d;
+            padding: 3rem 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
         }
         header h1 {
-            font-size: 2.5rem;
-            color: #58a6ff;
+            font-size: clamp(1.75rem, 5vw, 2.5rem);
+            color: var(--primary);
             margin-bottom: 0.5rem;
         }
-        header p {
-            color: #8b949e;
-            font-size: 1.1rem;
-        }
+        header .subtitle { color: var(--text-muted); font-size: 1.1rem; }
         .badges {
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
             gap: 0.5rem;
-            margin: 1.5rem 0;
+            margin-top: 1.5rem;
         }
         .badges img { height: 28px; }
+
+        .container { max-width: 880px; margin: 0 auto; padding: 0 1.5rem; }
+
         .features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            padding: 2rem 0;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            padding: 2.5rem 0;
         }
         .feature {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            transition: border-color var(--transition);
         }
-        .feature h3 {
-            color: #58a6ff;
-            margin-bottom: 0.5rem;
+        .feature:hover { border-color: var(--text-faint); }
+        .feature h3 { color: var(--primary); font-size: 1rem; margin-bottom: 0.35rem; }
+        .feature p { color: var(--text-muted); font-size: 0.875rem; }
+
+        .section { padding: 2rem 0; border-top: 1px solid var(--border); }
+        .section h2 { font-size: 1.3rem; margin-bottom: 1rem; color: var(--text); }
+
+        #wizard {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
         }
-        .feature p { color: #8b949e; }
-        .section {
-            padding: 2rem 0;
-            border-top: 1px solid #30363d;
+        .wizard-header {
+            background: var(--surface-2);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .section h2 {
-            color: #c9d1d9;
-            margin-bottom: 1rem;
+        .wizard-header h3 { font-size: 1rem; color: var(--text); }
+        .step-indicator { display: flex; gap: 0.4rem; }
+        .step-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background var(--transition);
         }
-        pre {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            color: #7ee787;
-            font-family: "SF Mono", Consolas, monospace;
-            font-size: 0.9rem;
-        }
-        .menu-tree {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 1.5rem;
-            font-family: "SF Mono", Consolas, monospace;
+        .step-dot.active { background: var(--primary); }
+        .step-dot.done { background: var(--success); }
+
+        .wizard-body { padding: 1.5rem; }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .wizard-step h4 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text); }
+        .wizard-step .desc { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem; }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
+        .form-group .hint { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+        input[type="text"] {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-family: var(--font-mono);
             font-size: 0.85rem;
-            color: #c9d1d9;
-            white-space: pre;
-            overflow-x: auto;
+            transition: border-color var(--transition);
         }
-        footer {
-            text-align: center;
-            padding: 2rem 0;
-            color: #484f58;
-            border-top: 1px solid #30363d;
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
         }
-        a { color: #58a6ff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .tag {
-            display: inline-block;
-            background: #1f6feb;
-            color: #fff;
-            padding: 0.15rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            margin: 0.1rem;
+
+        .tool-toggle {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: border-color var(--transition), background var(--transition);
         }
-        .tag.green { background: #238636; }
-        .tag.purple { background: #8957e5; }
-        .tag.orange { background: #bc4c00; }
+        .tool-toggle:hover { border-color: var(--text-faint); }
+        .tool-toggle.enabled { border-color: var(--success); background: rgba(35, 134, 54, 0.08); }
+        .tool-toggle .toggle-switch {
+            position: relative; width: 40px; height: 22px; flex-shrink: 0;
+            background: var(--border); border-radius: 11px;
+            transition: background var(--transition); margin-top: 2px;
+        }
+        .tool-toggle .toggle-switch::after {
+            content: ""; position: absolute; top: 2px; left: 2px;
+            width: 18px; height: 18px; background: var(--text);
+            border-radius: 50%; transition: transform var(--transition);
+        }
+        .tool-toggle.enabled .toggle-switch { background: var(--success); }
+        .tool-toggle.enabled .toggle-switch::after { transform: translateX(18px); background: #fff; }
+        .tool-toggle .tool-info { flex: 1; }
+        .tool-toggle .tool-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+        .tool-toggle .tool-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; }
+        .tool-toggle .tool-fields { margin-top: 0.5rem; display: none; }
+        .tool-toggle.enabled .tool-fields { display: block; }
+        .tool-toggle .tool-fields input { margin-top: 0.4rem; }
+
+        .wizard-footer {
+            padding: 1rem 1.5rem;
+            background: var(--surface-2);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn {
+            padding: 0.55rem 1.2rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: var(--font-body);
+        }
+        .btn:hover { border-color: var(--text-faint); background: var(--surface-2); }
+        .btn-primary { background: var(--success); border-color: var(--success); color: #fff; }
+        .btn-primary:hover { background: var(--success-hover); border-color: var(--success-hover); }
+        .btn-primary:disabled { background: var(--surface); border-color: var(--border); color: var(--text-faint); cursor: not-allowed; }
+
+        .code-output {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+        .code-output-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.5rem 0.8rem; background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+        }
+        .code-output-header span { font-size: 0.8rem; color: var(--text-muted); }
+        .code-output pre {
+            padding: 1rem; overflow-x: auto;
+            font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.5;
+            color: #7ee787; max-height: 400px; overflow-y: auto;
+        }
+
+        .menu-tree {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius-md); padding: 1.25rem;
+            font-family: var(--font-mono); font-size: 0.82rem; color: var(--text);
+            white-space: pre; overflow-x: auto;
+        }
+
+        footer { text-align: center; padding: 2rem 1.5rem; color: var(--text-faint); border-top: 1px solid var(--border); font-size: 0.85rem; }
+
+        @media (max-width: 600px) {
+            .wizard-footer { flex-direction: column-reverse; gap: 0.75rem; }
+            .wizard-footer .btn { width: 100%; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>hAI.TermuxStartScript</h1>
-            <p>Configurable TUI Service Manager for Termux</p>
-            <div class="badges">
-                <img src="https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white" alt="Bash">
-                <img src="https://img.shields.io/badge/Termux-000000?style=flat-square&logo=android&logoColor=white" alt="Termux">
-                <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License">
-                <img src="https://img.shields.io/badge/Platform-Android-green?style=flat-square" alt="Platform">
-                <img src="https://img.shields.io/badge/TUI-dialog-blueviolet?style=flat-square" alt="dialog">
-                <img src="https://img.shields.io/badge/Tunnel-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare">
-            </div>
-        </header>
+    <header>
+        <h1>hAI.TermuxStartScript</h1>
+        <p class="subtitle">Configurable TUI Service Manager for Termux</p>
+        <div class="badges">
+            <img src="https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white" alt="Bash">
+            <img src="https://img.shields.io/badge/Termux-000000?style=flat-square&logo=android&logoColor=white" alt="Termux">
+            <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License">
+            <img src="https://img.shields.io/badge/Platform-Android-green?style=flat-square" alt="Platform">
+            <img src="https://img.shields.io/badge/TUI-dialog-blueviolet?style=flat-square" alt="dialog">
+            <img src="https://img.shields.io/badge/Tunnel-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare">
+        </div>
+    </header>
 
+    <div class="container">
         <div class="features">
-            <div class="feature">
-                <h3>Service Management</h3>
-                <p>Start, stop, and restart SSH and Cloudflared tunnels via termux-services (sv).</p>
-            </div>
-            <div class="feature">
-                <h3>Token Handling</h3>
-                <p>Paste Cloudflared tokens directly in the terminal — no dialog inputbox issues.</p>
-            </div>
-            <div class="feature">
-                <h3>Apps Menu</h3>
-                <p>Structured access to OSINT, Recon, and Pentest tools with short descriptions.</p>
-            </div>
-            <div class="feature">
-                <h3>Template-Ready</h3>
-                <p>Config block at the top — edit paths and commands for any Termux installation.</p>
-            </div>
-            <div class="feature">
-                <h3>Boot Support</h3>
-                <p>Works with Termux:Boot for auto-start on device boot.</p>
-            </div>
-            <div class="feature">
-                <h3>Status Overview</h3>
-                <p>Real-time status for SSH, Cloudflared, and token storage in one view.</p>
-            </div>
+            <div class="feature"><h3>Service Management</h3><p>Start, stop, and restart SSH and Cloudflared via termux-services.</p></div>
+            <div class="feature"><h3>Token Handling</h3><p>Paste Cloudflared tokens directly in the terminal.</p></div>
+            <div class="feature"><h3>Apps Menu</h3><p>Structured, categorised access to your own apps — fully placeholder-based.</p></div>
+            <div class="feature"><h3>Config Wizard</h3><p>Interactive assistant to configure and download your script.</p></div>
+            <div class="feature"><h3>Boot Support</h3><p>Works with Termux:Boot for auto-start on boot.</p></div>
+            <div class="feature"><h3>Template-Ready</h3><p>Adapt paths and commands for any Termux installation.</p></div>
         </div>
 
         <div class="section">
-            <h2>Quick Start</h2>
-<pre>git clone https://github.com/YOUR_USERNAME/hAI.TermuxStartScript.git
-cd hAI.TermuxStartScript
-cp service.sh ~/service.sh
-chmod +x ~/service.sh
-nano ~/service.sh   # Edit CONFIG section
-~/service.sh</pre>
+            <h2>Configuration Assistant</h2>
+            <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.9rem;">
+                Walk through each step, toggle the apps you need, enter your commands and descriptions, and download a ready-to-use <code style="color:var(--orange);font-family:var(--font-mono);">service.sh</code>.
+            </p>
+
+            <div id="wizard">
+                <div class="wizard-header">
+                    <h3 id="wizard-title">Step 1: General Settings</h3>
+                    <div class="step-indicator" id="step-dots">
+                        <div class="step-dot active"></div>
+                        <div class="step-dot"></div>
+                        <div class="step-dot"></div>
+                        <div class="step-dot"></div>
+                        <div class="step-dot"></div>
+                    </div>
+                </div>
+
+                <div class="wizard-body">
+
+                    <!-- STEP 1 -->
+                    <div class="wizard-step active" data-step="1">
+                        <h4>General Settings</h4>
+                        <p class="desc">Basic configuration for your Termux environment.</p>
+                        <div class="form-group">
+                            <label>Cloudflared Token File Path</label>
+                            <p class="hint">Where to store the tunnel token on your device.</p>
+                            <input type="text" id="cfg-token-file" value="$HOME/.config/my-services/cloudflared.token">
+                        </div>
+                        <div class="form-group">
+                            <label>SSH Service Name</label>
+                            <input type="text" id="cfg-service-sshd" value="sshd">
+                        </div>
+                        <div class="form-group">
+                            <label>Cloudflared Service Name</label>
+                            <input type="text" id="cfg-service-cf" value="cloudflared">
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Category 1 -->
+                    <div class="wizard-step" data-step="2">
+                        <h4>Category 1 Apps</h4>
+                        <p class="desc">Toggle the apps you want in your first category and enter their details.</p>
+                        <div class="form-group">
+                            <label>Category 1 Name</label>
+                            <input type="text" id="cat1-name" value="Kategorie 1">
+                        </div>
+                        <div class="tool-toggle" data-tool="app1">
+                            <div class="toggle-switch"></div>
+                            <div class="tool-info">
+                                <div class="tool-name">App 1</div>
+                                <div class="tool-desc">Placeholder — enter your app name, description, and command</div>
+                                <div class="tool-fields">
+                                    <input type="text" id="app1-name" value="App 1" placeholder="Display name">
+                                    <input type="text" id="app1-desc" value="kurze Beschreibung" placeholder="Short description for menu">
+                                    <input type="text" id="app1-cmd" value="echo 'Platzhalter App 1'" placeholder="Command to launch">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tool-toggle" data-tool="app2">
+                            <div class="toggle-switch"></div>
+                            <div class="tool-info">
+                                <div class="tool-name">App 2</div>
+                                <div class="tool-desc">Placeholder — enter your app name, description, and command</div>
+                                <div class="tool-fields">
+                                    <input type="text" id="app2-name" value="App 2" placeholder="Display name">
+                                    <input type="text" id="app2-desc" value="kurze Beschreibung" placeholder="Short description for menu">
+                                    <input type="text" id="app2-cmd" value="echo 'Platzhalter App 2'" placeholder="Command to launch">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Category 2 -->
+                    <div class="wizard-step" data-step="3">
+                        <h4>Category 2 Apps</h4>
+                        <p class="desc">Toggle the apps you want in your second category.</p>
+                        <div class="form-group">
+                            <label>Category 2 Name</label>
+                            <input type="text" id="cat2-name" value="Kategorie 2">
+                        </div>
+                        <div class="tool-toggle" data-tool="app3">
+                            <div class="toggle-switch"></div>
+                            <div class="tool-info">
+                                <div class="tool-name">App 3</div>
+                                <div class="tool-desc">Placeholder — enter your app details</div>
+                                <div class="tool-fields">
+                                    <input type="text" id="app3-name" value="App 3" placeholder="Display name">
+                                    <input type="text" id="app3-desc" value="kurze Beschreibung" placeholder="Short description">
+                                    <input type="text" id="app3-cmd" value="echo 'Platzhalter App 3'" placeholder="Command to launch">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: Category 3 -->
+                    <div class="wizard-step" data-step="4">
+                        <h4>Category 3 Apps</h4>
+                        <p class="desc">Toggle the apps you want in your third category.</p>
+                        <div class="form-group">
+                            <label>Category 3 Name</label>
+                            <input type="text" id="cat3-name" value="Kategorie 3">
+                        </div>
+                        <div class="tool-toggle" data-tool="app4">
+                            <div class="toggle-switch"></div>
+                            <div class="tool-info">
+                                <div class="tool-name">App 4</div>
+                                <div class="tool-desc">Placeholder — enter your app details</div>
+                                <div class="tool-fields">
+                                    <input type="text" id="app4-name" value="App 4" placeholder="Display name">
+                                    <input type="text" id="app4-desc" value="kurze Beschreibung" placeholder="Short description">
+                                    <input type="text" id="app4-cmd" value="echo 'Platzhalter App 4'" placeholder="Command to launch">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tool-toggle" data-tool="app5">
+                            <div class="toggle-switch"></div>
+                            <div class="tool-info">
+                                <div class="tool-name">App 5</div>
+                                <div class="tool-desc">Placeholder — enter your app details</div>
+                                <div class="tool-fields">
+                                    <input type="text" id="app5-name" value="App 5" placeholder="Display name">
+                                    <input type="text" id="app5-desc" value="kurze Beschreibung" placeholder="Short description">
+                                    <input type="text" id="app5-cmd" value="echo 'Platzhalter App 5'" placeholder="Command to launch">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 5: Generate -->
+                    <div class="wizard-step" data-step="5">
+                        <h4>Generate &amp; Download</h4>
+                        <p class="desc">Review your configuration and download the customized script.</p>
+                        <div id="gen-summary" style="margin-bottom:1rem;font-size:0.85rem;color:var(--text-muted);"></div>
+                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+                            <button class="btn btn-primary" onclick="generateScript()">Generate service.sh</button>
+                            <button class="btn" id="download-btn" onclick="downloadScript()" disabled>Download service.sh</button>
+                            <button class="btn" onclick="copyScript()">Copy to clipboard</button>
+                        </div>
+                        <div class="code-output" id="code-output" style="display:none;">
+                            <div class="code-output-header">
+                                <span>service.sh</span>
+                                <span id="char-count"></span>
+                            </div>
+                            <pre id="generated-code"></pre>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="wizard-footer">
+                    <button class="btn" id="btn-prev" onclick="navigateStep(-1)" disabled>Back</button>
+                    <button class="btn btn-primary" id="btn-next" onclick="navigateStep(1)">Next</button>
+                </div>
+            </div>
         </div>
 
         <div class="section">
             <h2>Menu Structure</h2>
             <div class="menu-tree">SSH + Cloudflared (Main Menu)
-├── Status anzeigen
-├── SSH starten / stoppen
-├── Cloudflared starten / stoppen / restart
-├── Cloudflared-Token eingeben / Status
-├── Alles starten
-├── Apps
-│   ├── OSINT
-│   │   ├── Infoooze  — OSINT für Domains, IPs, Usernames, DNS
-│   │   ├── Mr.Holmes — OSINT für Domains, Usernames, Telefonnummern
-│   │   └── ReconDog  — Recon für DNS, Ports, CMS, Subdomains
-│   ├── Frameworks
-│   │   └── Metasploit — modulares Pentest-Framework
-│   ├── Tool-Sammlungen
-│   │   └── DarkFly — Launcher/Installer für Security-Tools
-│   └── Hinweise
-│       ├── Zphisher (nur Info, nicht startbar)
-│       └── Lokales Script starten (Platzhalter)
-└── Beenden</div>
-        </div>
-
-        <div class="section">
-            <h2>Tools</h2>
-            <p>
-                <span class="tag">Infoooze</span>
-                <span class="tag green">Mr.Holmes</span>
-                <span class="tag green">ReconDog</span>
-                <span class="tag purple">Metasploit</span>
-                <span class="tag orange">DarkFly</span>
-                <span class="tag">Zphisher (info only)</span>
-            </p>
+|-- Status anzeigen
+|-- SSH starten / stoppen
+|-- Cloudflared starten / stoppen / restart
+|-- Cloudflared-Token eingeben / Status
+|-- Alles starten
+|-- Apps
+|   |-- Kategorie 1 (custom name)
+|   |   |-- App 1 — kurze Beschreibung
+|   |   +-- App 2 — kurze Beschreibung
+|   |-- Kategorie 2 (custom name)
+|   |   +-- App 3 — kurze Beschreibung
+|   |-- Kategorie 3 (custom name)
+|   |   |-- App 4 — kurze Beschreibung
+|   |   +-- App 5 — kurze Beschreibung
+|   +-- Hinweise
+|       |-- App 6 (nur Info)
+|       +-- Lokales Script starten (Platzhalter)
++-- Beenden</div>
         </div>
 
         <div class="section">
             <h2>Prerequisites</h2>
-<pre>pkg install dialog termux-services openssh cloudflared
+            <div class="menu-tree">pkg install dialog termux-services openssh cloudflared
 sv-enable sshd
-sv-enable cloudflared</pre>
+sv-enable cloudflared</div>
         </div>
 
-        <footer>
-            <p>hAI.TermuxStartScript &mdash; <a href="https://github.com/YOUR_USERNAME/hAI.TermuxStartScript">GitHub Repository</a> &mdash; MIT License</p>
-        </footer>
     </div>
+
+    <footer>
+        <p>hAI.TermuxStartScript &mdash; MIT License &mdash; <a href="https://github.com/YOUR_USERNAME/hAI.TermuxStartScript">GitHub Repository</a></p>
+    </footer>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+        let generatedCode = '';
+
+        const stepTitles = [
+            'Step 1: General Settings',
+            'Step 2: Category 1 Apps',
+            'Step 3: Category 2 Apps',
+            'Step 4: Category 3 Apps',
+            'Step 5: Generate & Download'
+        ];
+
+        document.querySelectorAll('.tool-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                if (e.target.tagName === 'INPUT') return;
+                this.classList.toggle('enabled');
+            });
+        });
+
+        function navigateStep(dir) {
+            const newStep = currentStep + dir;
+            if (newStep < 1 || newStep > totalSteps) return;
+            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
+            document.querySelector(`.wizard-step[data-step="${newStep}"]`).classList.add('active');
+            currentStep = newStep;
+            document.getElementById('wizard-title').textContent = stepTitles[currentStep - 1];
+            const dots = document.querySelectorAll('.step-dot');
+            dots.forEach((dot, i) => {
+                dot.classList.remove('active', 'done');
+                if (i < currentStep - 1) dot.classList.add('done');
+                if (i === currentStep - 1) dot.classList.add('active');
+            });
+            document.getElementById('btn-prev').disabled = (currentStep === 1);
+            document.getElementById('btn-next').textContent = currentStep === totalSteps ? 'Finish' : 'Next';
+            if (currentStep === 5) updateSummary();
+        }
+
+        function isEnabled(tool) {
+            const el = document.querySelector(`.tool-toggle[data-tool="${tool}"]`);
+            return el ? el.classList.contains('enabled') : false;
+        }
+        function getVal(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function collectConfig() {
+            const apps = {};
+            for (let i = 1; i <= 5; i++) {
+                apps['app' + i] = {
+                    enabled: isEnabled('app' + i),
+                    name: getVal('app' + i + '-name'),
+                    desc: getVal('app' + i + '-desc'),
+                    cmd: getVal('app' + i + '-cmd')
+                };
+            }
+            return {
+                tokenFile: getVal('cfg-token-file'),
+                serviceSshd: getVal('cfg-service-sshd'),
+                serviceCf: getVal('cfg-service-cf'),
+                cat1Name: getVal('cat1-name'),
+                cat2Name: getVal('cat2-name'),
+                cat3Name: getVal('cat3-name'),
+                apps: apps
+            };
+        }
+
+        function escapeShell(str) {
+            return str.replace(/'/g, "'\\''");
+        }
+
+        function updateSummary() {
+            const cfg = collectConfig();
+            const active = [];
+            for (let i = 1; i <= 5; i++) {
+                if (cfg.apps['app' + i].enabled) active.push(cfg.apps['app' + i].name || ('App ' + i));
+            }
+            document.getElementById('gen-summary').innerHTML =
+                `<strong>Token file:</strong> <code style="color:var(--orange);font-family:var(--font-mono);">${cfg.tokenFile}</code><br>` +
+                `<strong>Categories:</strong> ${cfg.cat1Name}, ${cfg.cat2Name}, ${cfg.cat3Name}<br>` +
+                `<strong>Enabled apps (${active.length}):</strong> ${active.length ? active.join(', ') : 'none'}<br><br>` +
+                `Click <strong>Generate service.sh</strong> to create your customized script.`;
+        }
+
+        function generateScript() {
+            const cfg = collectConfig();
+            const a = cfg.apps;
+
+            let s = `#!/data/data/com.termux/files/usr/bin/bash\n`;
+            s += `# ============================================================\n`;
+            s += `# hAI.TermuxStartScript — Generated by Configurator\n`;
+            s += `# Generated: ${new Date().toISOString().split('T')[0]}\n`;
+            s += `# ============================================================\n\n`;
+            s += `# ==================== CONFIG ====================\n`;
+            s += `TOKEN_FILE="${escapeShell(cfg.tokenFile)}"\n\n`;
+
+            if (a.app1.enabled) s += `CMD_APP_1="${escapeShell(a.app1.cmd)}"\n`;
+            if (a.app2.enabled) s += `CMD_APP_2="${escapeShell(a.app2.cmd)}"\n`;
+            if (a.app3.enabled) s += `CMD_APP_3="${escapeShell(a.app3.cmd)}"\n`;
+            if (a.app4.enabled) s += `CMD_APP_4="${escapeShell(a.app4.cmd)}"\n`;
+            if (a.app5.enabled) s += `CMD_APP_5="${escapeShell(a.app5.cmd)}"\n`;
+            s += `\nSERVICE_SSHD="${escapeShell(cfg.serviceSshd)}"\n`;
+            s += `SERVICE_CLOUDFLARED="${escapeShell(cfg.serviceCf)}"\n`;
+            s += `# ================ END CONFIG ====================\n\n`;
+            s += `export SVDIR="$PREFIX/var/service"\n`;
+            s += `mkdir -p "$HOME/.config/my-services"\n\n`;
+
+            // helper functions
+            s += `ssh_running_any() {\n  pgrep -x sshd >/dev/null 2>&1\n}\n\n`;
+            s += `port_8022_in_use() {\n  pgrep -x sshd >/dev/null 2>&1\n}\n\n`;
+            s += `cloudflared_token_set() {\n  [ -f "$TOKEN_FILE" ] && [ -s "$TOKEN_FILE" ]\n}\n\n`;
+
+            s += `show_status() {\n  local ssh_status cf_status token_status port_status\n  if ssh_running_any; then\n    ssh_status="läuft"\n    port_status="ja"\n  else\n    ssh_status="gestoppt"\n    port_status="nein/unbekannt"\n  fi\n  cf_status="$(sv status "$SERVICE_CLOUDFLARED" 2>&1)"\n  if cloudflared_token_set; then\n    token_status="gespeichert"\n  else\n    token_status="nicht gesetzt"\n  fi\n  cat <<STATUS\nSSH: $ssh_status\nPort 8022 belegt/vermutet: $port_status\n\nCloudflared: $cf_status\nCloudflared-Token: $token_status\nSTATUS\n}\n\n`;
+
+            s += `set_token_terminal() {\n  clear\n  echo "Cloudflared-Token eingeben"\n  echo "----------------------------------------"\n  echo "Hier kannst du normal im Terminal einfügen."\n  echo ""\n  printf "Token: "\n  IFS= read -r token\n  if [ -n "$token" ]; then\n    printf "%s" "$token" > "$TOKEN_FILE"\n    chmod 600 "$TOKEN_FILE"\n    dialog --msgbox "Token gespeichert." 6 30\n  else\n    dialog --msgbox "Leerer Token wurde nicht gespeichert." 6 45\n  fi\n}\n\n`;
+
+            s += `show_token_info() {\n  if cloudflared_token_set; then\n    dialog --msgbox "Cloudflared-Token ist gespeichert." 6 40\n  else\n    dialog --msgbox "Cloudflared-Token ist nicht gesetzt." 6 40\n  fi\n}\n\n`;
+
+            s += `start_ssh_safe() {\n  if ssh_running_any || port_8022_in_use; then\n    dialog --msgbox "SSH läuft bereits oder Port 8022 ist belegt.\\nEs wird nichts geändert." 8 55\n    return\n  fi\n  sv up "$SERVICE_SSHD"\n  sleep 1\n  dialog --msgbox "$(sv status "$SERVICE_SSHD" 2>&1)" 8 60\n}\n\n`;
+
+            s += `start_cloudflared() {\n  if ! cloudflared_token_set; then\n    dialog --msgbox "Kein Cloudflared-Token gesetzt." 6 40\n    return\n  fi\n  sv up "$SERVICE_CLOUDFLARED"\n  sleep 1\n  dialog --msgbox "$(sv status "$SERVICE_CLOUDFLARED" 2>&1)" 8 60\n}\n\n`;
+
+            s += `stop_cloudflared() {\n  sv down "$SERVICE_CLOUDFLARED"\n  sleep 1\n  dialog --msgbox "$(sv status "$SERVICE_CLOUDFLARED" 2>&1)" 8 60\n}\n\n`;
+
+            s += `restart_cloudflared() {\n  if ! cloudflared_token_set; then\n    dialog --msgbox "Kein Cloudflared-Token gesetzt." 6 40\n    return\n  fi\n  sv restart "$SERVICE_CLOUDFLARED"\n  sleep 1\n  dialog --msgbox "$(sv status "$SERVICE_CLOUDFLARED" 2>&1)" 8 60\n}\n\n`;
+
+            s += `start_all_safe() {\n  if ! ssh_running_any && ! port_8022_in_use; then\n    sv up "$SERVICE_SSHD"\n  fi\n  if cloudflared_token_set; then\n    sv up "$SERVICE_CLOUDFLARED"\n  fi\n  sleep 1\n  dialog --msgbox "$(show_status)" 14 65\n}\n\n`;
+
+            s += `run_in_terminal() {\n  local title="$1"\n  local cmd="$2"\n  clear\n  echo "$title"\n  echo "----------------------------------------"\n  echo "Befehl: $cmd"\n  echo ""\n  eval "$cmd"\n  echo ""\n  read -p "Enter drücken für Rückkehr ins Menü..."\n}\n\n`;
+
+            // show_app_info
+            s += `show_app_info() {\n  case "$1" in\n`;
+            for (let i = 1; i <= 5; i++) {
+                if (a['app' + i].enabled) {
+                    s += `    app${i}) dialog --msgbox "${a['app' + i].name || ('App ' + i)}:\\n${a['app' + i].desc || 'kurze Beschreibung'}" 8 70 ;;\n`;
+                }
+            }
+            s += `    app6) dialog --msgbox "App 6:\\nPlatzhalter — hier eigene Beschreibung eintragen." 8 68 ;;\n`;
+            s += `    localscript) dialog --msgbox "Lokales Script starten:\\nPlatzhalter für ein eigenes, harmloses lokales Skript oder Utility." 8 68 ;;\n`;
+            s += `  esac\n}\n\n`;
+
+            s += `run_local_script() {\n  clear\n  echo "Lokales Script starten"\n  echo "----------------------------------------"\n  echo "Bitte trage hier später ein eigenes harmloses Script ein."\n  echo ""\n  read -p "Enter drücken für Rückkehr ins Menü..."\n}\n\n`;
+
+            // app_menu
+            s += `app_menu() {\n  local app="$1"\n  local title="$2"\n  local cmd="$3"\n  while true; do\n    APP_ACTION=$(dialog --clear --backtitle "Termux Services" --title "$title" --menu "Bitte wählen:" 16 68 8 1 "Info anzeigen" 2 "Starten" 3 "Neustarten" 4 "Zurück" 2>&1 >/dev/tty)\n    clear\n    case "$APP_ACTION" in\n      1) show_app_info "$app" ;;\n      2) run_in_terminal "$title starten" "$cmd" ;;\n      3) run_in_terminal "$title neu starten" "$cmd" ;;\n      4|*) break ;;\n    esac\n  done\n}\n\n`;
+
+            // category menus — build dynamically
+            function buildCatMenu(catNum, catName, appIds) {
+                let entries = [];
+                let cases = [];
+                let idx = 1;
+                appIds.forEach(id => {
+                    const app = a[id];
+                    if (app.enabled) {
+                        entries.push(`      ${idx} "${app.name || id} - ${app.desc || 'kurze Beschreibung'}"`);
+                        cases.push(`      ${idx}) app_menu "${id}" "${app.name || id}" "$CMD_APP_${id.replace('app','')}" ;;`);
+                        idx++;
+                    }
+                });
+                entries.push(`      ${idx} "Zurück"`);
+                cases.push(`      ${idx}|*) break ;;`);
+
+                let m = `category_${catNum}_menu() {\n  while true; do\n    CHOICE=$(dialog --clear --backtitle "Termux Services" --title "${escapeShell(catName)}" --menu "Apps auswählen:" 20 90 10 \\\n`;
+                m += entries.join(' \\\n') + ' \\\n';
+                m += `      2>&1 >/dev/tty)\n    clear\n    case "$CHOICE" in\n`;
+                m += cases.join('\n') + '\n';
+                m += `    esac\n  done\n}\n\n`;
+                return m;
+            }
+
+            s += buildCatMenu(1, cfg.cat1Name, ['app1', 'app2']);
+            s += buildCatMenu(2, cfg.cat2Name, ['app3']);
+            s += buildCatMenu(3, cfg.cat3Name, ['app4', 'app5']);
+
+            // notes_menu
+            s += `notes_menu() {\n  while true; do\n    CHOICE=$(dialog --clear --backtitle "Termux Services" --title "Hinweise" --menu "Hinweis auswählen:" 16 90 8 \\\n      1 "App 6 (nur Info) - kurze Beschreibung" \\\n      2 "Lokales Script starten - Platzhalter für eigenes Script" \\\n      3 "Zurück" \\\n      2>&1 >/dev/tty)\n    clear\n    case "$CHOICE" in\n      1) show_app_info "app6" ;;\n      2) show_app_info "localscript"; run_local_script ;;\n      3|*) break ;;\n    esac\n  done\n}\n\n`;
+
+            // apps_menu
+            s += `apps_menu() {\n  while true; do\n    APP_CHOICE=$(dialog --clear --backtitle "Termux Services" --title "Apps" --menu "Bereich auswählen:" 18 90 10 \\\n      1 "${escapeShell(cfg.cat1Name)} - kurze Beschreibung" \\\n      2 "${escapeShell(cfg.cat2Name)} - kurze Beschreibung" \\\n      3 "${escapeShell(cfg.cat3Name)} - kurze Beschreibung" \\\n      4 "Hinweise        - Infotexte und Platzhalter" \\\n      5 "Zurück" \\\n      2>&1 >/dev/tty)\n    clear\n    case "$APP_CHOICE" in\n      1) category_1_menu ;;\n      2) category_2_menu ;;\n      3) category_3_menu ;;\n      4) notes_menu ;;\n      5|*) break ;;\n    esac\n  done\n}\n\n`;
+
+            // main menu
+            s += `# ==================== MAIN MENU ====================\nwhile true; do\n  CHOICE=$(dialog --clear --backtitle "Termux Services" --title "SSH + Cloudflared" --menu "Bitte wählen:" 20 75 12 \\\n    1 "Status anzeigen" \\\n    2 "SSH starten (nur wenn Port frei)" \\\n    3 "SSH stoppen (gesperrt)" \\\n    4 "Cloudflared starten" \\\n    5 "Cloudflared stoppen" \\\n    6 "Cloudflared neu starten" \\\n    7 "Cloudflared-Token eingeben (Terminal-Paste)" \\\n    8 "Cloudflared-Token Status" \\\n    9 "Alles starten" \\\n    10 "Apps" \\\n    11 "Beenden" \\\n    2>&1 >/dev/tty)\n  clear\n  case "$CHOICE" in\n    1) dialog --msgbox "$(show_status)" 14 65 ;;\n    2) start_ssh_safe ;;\n    3) dialog --msgbox "SSH-Stopp ist aktuell gesperrt,\\ndamit du deine aktive SSH-Verbindung nicht verlierst." 8 55 ;;\n    4) start_cloudflared ;;\n    5) stop_cloudflared ;;\n    6) restart_cloudflared ;;\n    7) set_token_terminal ;;\n    8) show_token_info ;;\n    9) start_all_safe ;;\n    10) apps_menu ;;\n    11|*) clear; exit 0 ;;\n  esac\ndone\n`;
+
+            generatedCode = s;
+            document.getElementById('generated-code').textContent = s;
+            document.getElementById('code-output').style.display = 'block';
+            document.getElementById('char-count').textContent = s.length + ' chars';
+            document.getElementById('download-btn').disabled = false;
+        }
+
+        function downloadScript() {
+            if (!generatedCode) return;
+            const blob = new Blob([generatedCode], { type: 'text/x-shellscript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'service.sh';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function copyScript() {
+            if (!generatedCode) { alert('Please generate the script first.'); return; }
+            navigator.clipboard.writeText(generatedCode).then(() => {
+                const btn = event.target;
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 2000);
+            }).catch(() => { alert('Copy failed. Please select the code manually.'); });
+        }
+    </script>
 </body>
 </html>

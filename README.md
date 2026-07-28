@@ -7,15 +7,16 @@
 ![dialog](https://img.shields.io/badge/TUI-dialog-blueviolet?style=flat-square)
 ![Cloudflare](https://img.shields.io/badge/Tunnel-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white)
 
-A configurable TUI (Terminal User Interface) start script for **Termux** that manages SSH, Cloudflare Tunnels, and security/OSINT tools — all from a single `dialog`-based menu.
+A configurable TUI (Terminal User Interface) start script for **Termux** that manages SSH, Cloudflare Tunnels, and custom apps — all from a single `dialog`-based menu.
 
 ## Features
 
 - **Service Management**: Start, stop, restart SSH and Cloudflared via `termux-services` (`sv`)
 - **Token Handling**: Paste Cloudflared tokens directly in the terminal (no `dialog` inputbox issues)
 - **Status Overview**: Real-time status for SSH, Cloudflared, and token storage
-- **Apps Menu**: Structured access to OSINT, Recon, and Pentest tools
+- **Apps Menu**: Structured, categorised access to your own apps — fully placeholder-based
 - **Template-Ready**: Config block at the top — just edit paths and commands for your installation
+- **Config Wizard**: Interactive web-based assistant to configure and download your script
 - **Boot Support**: Works with `Termux:Boot` for auto-start on device boot
 
 ## Quick Start
@@ -29,7 +30,7 @@ cd hAI.TermuxStartScript
 cp service.sh ~/service.sh
 chmod +x ~/service.sh
 
-# 3. Edit CONFIG section — adjust paths to your tools
+# 3. Edit CONFIG section — adjust paths to your apps
 nano ~/service.sh
 
 # 4. Run
@@ -44,16 +45,30 @@ Edit the **CONFIG** block at the top of `service.sh`:
 # ==================== CONFIG ====================
 TOKEN_FILE="$HOME/.config/my-services/cloudflared.token"
 
-CMD_INFOOOZE="/data/data/com.termux/files/usr/bin/infoooze"
-CMD_MRHOLMES="cd $HOME/Mr.Holmes && python3 MrHolmes.py"
-CMD_RECONDOG="cd $HOME/ReconDog && python dog"
-CMD_METASPLOIT="msfconsole"
-CMD_DARKFLY="/data/data/com.termux/files/usr/bin/DarkFly"
+# Apps — replace with your own commands
+CMD_APP_1="your-command-here"
+CMD_APP_2="your-command-here"
+CMD_APP_3="your-command-here"
+CMD_APP_4="your-command-here"
+CMD_APP_5="your-command-here"
 
 SERVICE_SSHD="sshd"
 SERVICE_CLOUDFLARED="cloudflared"
 # ================ END CONFIG ====================
 ```
+
+Also adjust the menu labels and descriptions in the category functions (e.g. `category_1_menu`, `category_2_menu`) to match your apps.
+
+## Config Wizard
+
+Visit the [GitHub Pages site](https://YOUR_USERNAME.github.io/hAI.TermuxStartScript/) to use the interactive configuration assistant:
+
+1. Enter your general settings (token file path, service names)
+2. Toggle apps on/off and enter their launch commands
+3. Add short descriptions for each app
+4. Generate and download a ready-to-use `service.sh`
+
+The wizard runs entirely in your browser — no data is sent anywhere.
 
 ## Menu Structure
 
@@ -65,16 +80,16 @@ SSH + Cloudflared (Main Menu)
 ├── Cloudflared-Token eingeben / Status
 ├── Alles starten
 ├── Apps
-│   ├── OSINT
-│   │   ├── Infoooze  — OSINT für Domains, IPs, Usernames, DNS
-│   │   ├── Mr.Holmes — OSINT für Domains, Usernames, Telefonnummern
-│   │   └── ReconDog  — Recon für DNS, Ports, CMS, Subdomains
-│   ├── Frameworks
-│   │   └── Metasploit — modulares Pentest-Framework
-│   ├── Tool-Sammlungen
-│   │   └── DarkFly — Launcher/Installer für Security-Tools
+│   ├── Kategorie 1
+│   │   ├── App 1 — kurze Beschreibung
+│   │   └── App 2 — kurze Beschreibung
+│   ├── Kategorie 2
+│   │   └── App 3 — kurze Beschreibung
+│   ├── Kategorie 3
+│   │   ├── App 4 — kurze Beschreibung
+│   │   └── App 5 — kurze Beschreibung
 │   └── Hinweise
-│       ├── Zphisher (nur Info, nicht startbar)
+│       ├── App 6 (nur Info)
 │       └── Lokales Script starten (Platzhalter)
 └── Beenden
 ```
@@ -101,17 +116,6 @@ exec runsvdir -P "$PREFIX/var/service"
 Make sure to:
 - Install and open **Termux:Boot** once
 - Disable battery optimization for Termux and Termux:Boot
-
-## Tools Overview
-
-| Tool | Category | Description |
-|---|---|---|
-| Infoooze | OSINT | Information gathering on domains, IPs, usernames, DNS, headers, EXIF |
-| Mr.Holmes | OSINT | Recon on domains, usernames, phone numbers from public sources |
-| ReconDog | Recon | All-in-one reconnaissance toolkit (DNS, ports, CMS, subdomains, Whois) |
-| Metasploit | Framework | Modular penetration testing framework by Rapid7 |
-| DarkFly | Tool-Sammlung | Installer/launcher for hundreds of security and utility tools |
-| Zphisher | Hinweis | Phishing toolkit — info only, not startable |
 
 ## License
 

@@ -8,16 +8,13 @@
 # Cloudflared
 TOKEN_FILE="$HOME/.config/my-services/cloudflared.token"
 
-# OSINT Tools — adjust paths/commands to your installation
-CMD_INFOOOZE="/data/data/com.termux/files/usr/bin/infoooze"
-CMD_MRHOLMES="cd $HOME/Mr.Holmes && python3 MrHolmes.py"
-CMD_RECONDOG="cd $HOME/ReconDog && python dog"
-
-# Frameworks
-CMD_METASPLOIT="msfconsole"
-
-# Tool-Sammlungen
-CMD_DARKFLY="/data/data/com.termux/files/usr/bin/DarkFly"
+# Apps — replace with your own commands
+# Format: CMD_APP_XX="your command here"
+CMD_APP_1="echo 'Platzhalter App 1 — hier eigenen Befehl eintragen'"
+CMD_APP_2="echo 'Platzhalter App 2 — hier eigenen Befehl eintragen'"
+CMD_APP_3="echo 'Platzhalter App 3 — hier eigenen Befehl eintragen'"
+CMD_APP_4="echo 'Platzhalter App 4 — hier eigenen Befehl eintragen'"
+CMD_APP_5="echo 'Platzhalter App 5 — hier eigenen Befehl eintragen'"
 
 # Services (termux-services)
 SERVICE_SSHD="sshd"
@@ -161,23 +158,23 @@ run_in_terminal() {
 
 show_app_info() {
   case "$1" in
-    darkfly)
-      dialog --msgbox "DarkFly:\nTool-Sammlung bzw. Installer, der viele Security- und Utility-Tools über ein zentrales Menü zugänglich macht." 8 70
+    app1)
+      dialog --msgbox "App 1:\nPlatzhalter — hier eigene Beschreibung eintragen." 8 68
       ;;
-    infoooze)
-      dialog --msgbox "Infoooze:\nBenutzerfreundliches OSINT-Tool für Informationen zu Websites, IP-Adressen, Usernames, DNS, Headern, EXIF und weiteren offenen Quellen." 9 72
+    app2)
+      dialog --msgbox "App 2:\nPlatzhalter — hier eigene Beschreibung eintragen." 8 68
       ;;
-    mrholmes)
-      dialog --msgbox "Mr.Holmes:\nOSINT-/Information-Gathering-Tool für Domains, Usernames und Telefonnummern aus öffentlichen Quellen." 8 70
+    app3)
+      dialog --msgbox "App 3:\nPlatzhalter — hier eigene Beschreibung eintragen." 8 68
       ;;
-    metasploit)
-      dialog --msgbox "Metasploit:\nModulares Penetration-Testing-Framework von Rapid7 für autorisierte Sicherheitsanalysen, Assessments und Modultests." 8 72
+    app4)
+      dialog --msgbox "App 4:\nPlatzhalter — hier eigene Beschreibung eintragen." 8 68
       ;;
-    recondog)
-      dialog --msgbox "ReconDog:\nRecon-/Information-Gathering-Tool ('Reconnaissance Swiss Army Knife') für verschiedene Abfragen und Analysen." 8 72
+    app5)
+      dialog --msgbox "App 5:\nPlatzhalter — hier eigene Beschreibung eintragen." 8 68
       ;;
-    zphisher)
-      dialog --msgbox "Zphisher:\nPhishing-Toolkit. Es wird hier nur als Hinweis geführt und nicht startbar eingebunden." 8 68
+    app6)
+      dialog --msgbox "App 6 (nur Info):\nPlatzhalter — hier eigene Beschreibung eintragen." 8 68
       ;;
     localscript)
       dialog --msgbox "Lokales Script starten:\nPlatzhalter für ein eigenes, harmloses lokales Skript oder Utility." 8 68
@@ -229,44 +226,40 @@ app_menu() {
   done
 }
 
-osint_menu() {
+category_1_menu() {
   while true; do
     CHOICE=$(dialog --clear \
       --backtitle "Termux Services" \
-      --title "OSINT" \
-      --menu "OSINT-Tools auswählen:" 20 90 10 \
-      1 "Infoooze  - OSINT für Domains, IPs, Usernames, DNS und Webinfos" \
-      2 "Mr.Holmes - OSINT für Domains, Usernames und Telefonnummern" \
-      3 "ReconDog  - Recon für DNS, Ports, CMS, Subdomains und Whois" \
-      4 "Zurück" \
+      --title "Kategorie 1" \
+      --menu "Apps auswählen:" 20 90 10 \
+      1 "App 1 - kurze Beschreibung" \
+      2 "App 2 - kurze Beschreibung" \
+      3 "Zurück" \
       2>&1 >/dev/tty)
 
     clear
 
     case "$CHOICE" in
       1)
-        app_menu "infoooze" "Infoooze" "$CMD_INFOOOZE"
+        app_menu "app1" "App 1" "$CMD_APP_1"
         ;;
       2)
-        app_menu "mrholmes" "Mr.Holmes" "$CMD_MRHOLMES"
+        app_menu "app2" "App 2" "$CMD_APP_2"
         ;;
-      3)
-        app_menu "recondog" "ReconDog" "$CMD_RECONDOG"
-        ;;
-      4|*)
+      3|*)
         break
         ;;
     esac
   done
 }
 
-frameworks_menu() {
+category_2_menu() {
   while true; do
     CHOICE=$(dialog --clear \
       --backtitle "Termux Services" \
-      --title "Frameworks" \
-      --menu "Framework auswählen:" 16 90 8 \
-      1 "Metasploit - modulares Pentest-Framework für Assessments und Tests" \
+      --title "Kategorie 2" \
+      --menu "Apps auswählen:" 16 90 8 \
+      1 "App 3 - kurze Beschreibung" \
       2 "Zurück" \
       2>&1 >/dev/tty)
 
@@ -274,7 +267,7 @@ frameworks_menu() {
 
     case "$CHOICE" in
       1)
-        app_menu "metasploit" "Metasploit" "$CMD_METASPLOIT"
+        app_menu "app3" "App 3" "$CMD_APP_3"
         ;;
       2|*)
         break
@@ -283,23 +276,27 @@ frameworks_menu() {
   done
 }
 
-toolsets_menu() {
+category_3_menu() {
   while true; do
     CHOICE=$(dialog --clear \
       --backtitle "Termux Services" \
-      --title "Tool-Sammlungen" \
-      --menu "Sammlung auswählen:" 16 90 8 \
-      1 "DarkFly - Launcher/Installer für viele Security- und Utility-Tools" \
-      2 "Zurück" \
+      --title "Kategorie 3" \
+      --menu "Apps auswählen:" 16 90 8 \
+      1 "App 4 - kurze Beschreibung" \
+      2 "App 5 - kurze Beschreibung" \
+      3 "Zurück" \
       2>&1 >/dev/tty)
 
     clear
 
     case "$CHOICE" in
       1)
-        app_menu "darkfly" "DarkFly" "$CMD_DARKFLY"
+        app_menu "app4" "App 4" "$CMD_APP_4"
         ;;
-      2|*)
+      2)
+        app_menu "app5" "App 5" "$CMD_APP_5"
+        ;;
+      3|*)
         break
         ;;
     esac
@@ -312,8 +309,8 @@ notes_menu() {
       --backtitle "Termux Services" \
       --title "Hinweise" \
       --menu "Hinweis auswählen:" 16 90 8 \
-      1 "Zphisher - nur Hinweistext, nicht startbar eingebunden" \
-      2 "Lokales Script starten - Platzhalter für eigenes harmloses Script" \
+      1 "App 6 (nur Info) - kurze Beschreibung" \
+      2 "Lokales Script starten - Platzhalter für eigenes Script" \
       3 "Zurück" \
       2>&1 >/dev/tty)
 
@@ -321,7 +318,7 @@ notes_menu() {
 
     case "$CHOICE" in
       1)
-        show_app_info "zphisher"
+        show_app_info "app6"
         ;;
       2)
         show_app_info "localscript"
@@ -340,9 +337,9 @@ apps_menu() {
       --backtitle "Termux Services" \
       --title "Apps" \
       --menu "Bereich auswählen:" 18 90 10 \
-      1 "OSINT           - Informationssammlung und Recon" \
-      2 "Frameworks      - Sicherheits-Frameworks" \
-      3 "Tool-Sammlungen - Launcher und Installer" \
+      1 "Kategorie 1 - kurze Beschreibung" \
+      2 "Kategorie 2 - kurze Beschreibung" \
+      3 "Kategorie 3 - kurze Beschreibung" \
       4 "Hinweise        - Infotexte und Platzhalter" \
       5 "Zurück" \
       2>&1 >/dev/tty)
@@ -351,13 +348,13 @@ apps_menu() {
 
     case "$APP_CHOICE" in
       1)
-        osint_menu
+        category_1_menu
         ;;
       2)
-        frameworks_menu
+        category_2_menu
         ;;
       3)
-        toolsets_menu
+        category_3_menu
         ;;
       4)
         notes_menu
