@@ -1,5 +1,9 @@
 # hAI.TermuxStartScript
 
+<a href="https://www.buymeacoffee.com/highfish">
+<img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174">
+</a>
+
 ![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white)
 ![Termux](https://img.shields.io/badge/Termux-000000?style=flat-square&logo=android&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
@@ -120,3 +124,4 @@ Make sure to:
 ## License
 
 MIT
+
