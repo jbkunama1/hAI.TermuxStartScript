@@ -4,12 +4,12 @@
 <img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174">
 </a>
 
-![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white)
-![Termux](https://img.shields.io/badge/Termux-000000?style=flat-square&logo=android&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
-![Platform](https://img.shields.io/badge/Platform-Android-green?style=flat-square)
-![dialog](https://img.shields.io/badge/TUI-dialog-blueviolet?style=flat-square)
-![Cloudflare](https://img.shields.io/badge/Tunnel-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white)
+[![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white)](https://github.com/jbkunama1/hAI.TermuxStartScript)
+[![Termux](https://img.shields.io/badge/Termux-000000?style=flat-square&logo=android&logoColor=white)](https://github.com/jbkunama1/hAI.TermuxStartScript)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://github.com/jbkunama1/hAI.TermuxStartScript)
+[![Platform](https://img.shields.io/badge/Platform-Android-green?style=flat-square)](https://github.com/jbkunama1/hAI.TermuxStartScript)
+[![dialog](https://img.shields.io/badge/TUI-dialog-blueviolet?style=flat-square)](https://github.com/jbkunama1/hAI.TermuxStartScript)
+[![Cloudflare](https://img.shields.io/badge/Tunnel-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://github.com/jbkunama1/hAI.TermuxStartScript)
 
 A configurable TUI (Terminal User Interface) start script for **Termux** that manages SSH, Cloudflare Tunnels, and custom apps — all from a single `dialog`-based menu.
 
@@ -124,4 +124,3 @@ Make sure to:
 ## License
 
 MIT
-
