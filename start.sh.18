@@ -5,7 +5,8 @@
 # Dienste: sshd, cloudflared, llama.cpp (llama-server), feroxbuster
 # + Watchtower (llama_watchdog.sh): startet llama-server neu,
 #   wenn er gestoppt/abgestuerzt ist
-# + API-Key-Verwaltung für llama-server (--api-key)
+# + API-Key-Verwaltung und Watchtower-Einstellungen
+#   (Modell, Binary, Host, Port, Kontext, Threads)
 # =========================================================
 
 # --- Pfade zu deinen Scripts ---
@@ -20,15 +21,27 @@ CF_LOG="$HOME/cloudflared.log"
 # HINWEIS: Token hier lokal eintragen (nicht ins Repo committen!)
 CF_CMD="cloudflared tunnel run --token DEIN_CLOUDFLARE_TOKEN_HIER"
 
-LLAMA_DIR="$HOME/llama.cpp/build/bin"
-LLAMA_BIN="$LLAMA_DIR/llama-server"
+# --- Watchtower-Defaults (im Menue aenderbar) ---
+LLAMA_BIN="$HOME/llama.cpp/build/bin/llama-server"
+MODEL_PATH="$HOME/models/Qwen2.5-3B-Instruct/Qwen2.5-3B-Instruct-Q4_0_4_4.gguf"
+HOST="192.168.178.18"
+PORT=8080
+CTX_SIZE=6666
+THREADS=6
+
 LLAMA_LOG="$HOME/llama-server.log"
 WATCHDOG_LOG="$HOME/llama-watchdog.log"
 
-# API-Key-Datei für llama-server (wird vom Watchdog gelesen)
+# Konfig-Dateien (lokal, nie im Repo)
 API_KEY_FILE="$HOME/.config/my-services/llama-api.key"
+WATCHDOG_CONF="$HOME/.config/my-services/llama-watchdog.conf"
 
 mkdir -p "$HOME/.config/my-services"
+
+# Gespeicherte Watchtower-Einstellungen laden (ueberschreibt Defaults)
+if [ -f "$WATCHDOG_CONF" ]; then
+  . "$WATCHDOG_CONF"
+fi
 
 # --- Hilfsfunktionen ---
 
@@ -40,6 +53,11 @@ msg_box() {
 confirm_box() {
   local text="$1"
   whiptail --title "Bestätigen" --yesno "$text" 10 70
+}
+
+input_box() {
+  local title="$1" text="$2" current="$3"
+  whiptail --title "$title" --inputbox "$text" 10 76 "$current" 3>&1 1>&2 2>&3
 }
 
 # ---------------- sshd ----------------
@@ -137,6 +155,21 @@ api_key_set() {
   [ -f "$API_KEY_FILE" ] && [ -s "$API_KEY_FILE" ]
 }
 
+offer_restart_for_change() {
+  if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then
+    confirm_box "llama-server läuft noch mit den alten Werten.\nJetzt neu starten, damit die Änderung greift?"
+    if [ $? -eq 0 ]; then
+      pkill -f "$LLAMA_BIN" 2>/dev/null || true
+      sleep 1
+      if watchdog_running; then
+        msg_box "Server gestoppt – Watchtower startet ihn\ngleich mit den neuen Werten neu."
+      else
+        msg_box "Server gestoppt.\nStarte ihn neu (Punkt 1 oder Watchtower AN)."
+      fi
+    fi
+  fi
+}
+
 set_api_key_terminal() {
   clear
   echo "llama-server API-Key eingeben"
@@ -153,19 +186,7 @@ set_api_key_terminal() {
     printf '%s' "$apikey" > "$API_KEY_FILE"
     chmod 600 "$API_KEY_FILE"
     msg_box "API-Key gespeichert."
-
-    if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then
-      confirm_box "llama-server läuft noch mit dem alten Zustand.\nJetzt neu starten, damit der neue Key greift?"
-      if [ $? -eq 0 ]; then
-        pkill -f "$LLAMA_BIN" 2>/dev/null || true
-        sleep 1
-        if watchdog_running; then
-          msg_box "Server gestoppt – Watchtower startet ihn\ngleich mit dem neuen Key neu."
-        else
-          msg_box "Server gestoppt.\nStarte ihn neu (Punkt 1 oder Watchtower AN)."
-        fi
-      fi
-    fi
+    offer_restart_for_change
   else
     msg_box "Leere Eingabe – nichts gespeichert."
   fi
@@ -189,20 +210,175 @@ delete_api_key() {
   if [ $? -eq 0 ]; then
     rm -f "$API_KEY_FILE"
     msg_box "API-Key gelöscht."
-
-    if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then
-      confirm_box "llama-server läuft noch mit dem alten Key.\nJetzt neu starten, damit die Änderung greift?"
-      if [ $? -eq 0 ]; then
-        pkill -f "$LLAMA_BIN" 2>/dev/null || true
-        sleep 1
-        if watchdog_running; then
-          msg_box "Server gestoppt – Watchtower startet ihn\ngleich ohne Key neu."
-        else
-          msg_box "Server gestoppt.\nStarte ihn neu (Punkt 1 oder Watchtower AN)."
-        fi
-      fi
-    fi
+    offer_restart_for_change
   fi
+}
+
+# ---------------- Watchtower-Einstellungen ----------------
+
+save_watchdog_conf() {
+  cat > "$WATCHDOG_CONF" <<CONF
+LLAMA_BIN="$LLAMA_BIN"
+MODEL_PATH="$MODEL_PATH"
+HOST="$HOST"
+PORT=$PORT
+CTX_SIZE=$CTX_SIZE
+THREADS=$THREADS
+CONF
+  chmod 600 "$WATCHDOG_CONF"
+}
+
+choose_model() {
+  local models
+  models=$(find "$HOME/models" "$HOME" -maxdepth 5 -name "*.gguf" -type f 2>/dev/null | sort -u)
+
+  if [ -z "$models" ]; then
+    msg_box "Keine .gguf-Modelle gefunden.\n\nBitte Pfad manuell eintragen."
+    local manual
+    manual=$(input_box "Modell" "Pfad zur .gguf-Datei:" "$MODEL_PATH") || return 0
+    [ -n "$manual" ] && MODEL_PATH="$manual" && save_watchdog_conf && msg_box "Modell gespeichert." && offer_restart_for_change
+    return 0
+  fi
+
+  local -a items=()
+  local i=1 f
+  while IFS= read -r f; do
+    items+=("$i" "${f#$HOME/}")
+    i=$((i+1))
+  done <<< "$models"
+  items+=("M" "Pfad manuell eingeben")
+
+  local choice
+  choice=$(whiptail --title "Modell wählen" --menu \
+    "Gefundene .gguf-Modelle (aktuell: ${MODEL_PATH#$HOME/}):" \
+    24 90 15 "${items[@]}" 3>&1 1>&2 2>&3) || return 0
+
+  if [ "$choice" = "M" ]; then
+    local manual
+    manual=$(input_box "Modell" "Pfad zur .gguf-Datei:" "$MODEL_PATH") || return 0
+    [ -n "$manual" ] && MODEL_PATH="$manual"
+  else
+    MODEL_PATH=$(printf '%s\n' "$models" | sed -n "${choice}p")
+  fi
+
+  save_watchdog_conf
+  msg_box "Modell gespeichert:\n\n$MODEL_PATH"
+  offer_restart_for_change
+}
+
+choose_binary() {
+  local bins
+  bins=$(find "$HOME/llama.cpp" "$PREFIX/bin" -maxdepth 5 -name "llama-server" -type f 2>/dev/null | sort -u)
+
+  if [ -z "$bins" ]; then
+    msg_box "Keine llama-server-Binary gefunden.\n\nBitte Pfad manuell eintragen."
+    local manual
+    manual=$(input_box "Binary" "Pfad zur llama-server-Binary:" "$LLAMA_BIN") || return 0
+    [ -n "$manual" ] && LLAMA_BIN="$manual" && save_watchdog_conf && msg_box "Binary gespeichert." && offer_restart_for_change
+    return 0
+  fi
+
+  local -a items=()
+  local i=1 f
+  while IFS= read -r f; do
+    items+=("$i" "${f#$HOME/}")
+    i=$((i+1))
+  done <<< "$bins"
+  items+=("M" "Pfad manuell eingeben")
+
+  local choice
+  choice=$(whiptail --title "Server-Binary wählen" --menu \
+    "Gefundene llama-server-Binaries (aktuell: ${LLAMA_BIN#$HOME/}):" \
+    24 90 15 "${items[@]}" 3>&1 1>&2 2>&3) || return 0
+
+  if [ "$choice" = "M" ]; then
+    local manual
+    manual=$(input_box "Binary" "Pfad zur llama-server-Binary:" "$LLAMA_BIN") || return 0
+    [ -n "$manual" ] && LLAMA_BIN="$manual"
+  else
+    LLAMA_BIN=$(printf '%s\n' "$bins" | sed -n "${choice}p")
+  fi
+
+  save_watchdog_conf
+  msg_box "Binary gespeichert:\n\n$LLAMA_BIN"
+  offer_restart_for_change
+}
+
+edit_host() {
+  local v
+  v=$(input_box "Host" "Adresse, auf der der Server lauscht:" "$HOST") || return 0
+  [ -z "$v" ] && return 0
+  HOST="$v"
+  save_watchdog_conf
+  msg_box "Host gespeichert: $HOST"
+  offer_restart_for_change
+}
+
+edit_port() {
+  local v
+  v=$(input_box "Port" "Port für den Server:" "$PORT") || return 0
+  [ -z "$v" ] && return 0
+  PORT="$v"
+  save_watchdog_conf
+  msg_box "Port gespeichert: $PORT"
+  offer_restart_for_change
+}
+
+edit_ctx() {
+  local v
+  v=$(input_box "Kontextgröße" "Kontextgröße (-c):" "$CTX_SIZE") || return 0
+  [ -z "$v" ] && return 0
+  CTX_SIZE="$v"
+  save_watchdog_conf
+  msg_box "Kontextgröße gespeichert: $CTX_SIZE"
+  offer_restart_for_change
+}
+
+edit_threads() {
+  local v
+  v=$(input_box "Threads" "Anzahl Threads (-t):" "$THREADS") || return 0
+  [ -z "$v" ] && return 0
+  THREADS="$v"
+  save_watchdog_conf
+  msg_box "Threads gespeichert: $THREADS"
+  offer_restart_for_change
+}
+
+show_watchdog_conf() {
+  msg_box "Aktuelle Watchtower-Konfiguration:\n\nModell:  $MODEL_PATH\nBinary:  $LLAMA_BIN\nHost:    $HOST\nPort:    $PORT\nKontext: $CTX_SIZE\nThreads: $THREADS\n\nDatei: $WATCHDOG_CONF"
+}
+
+settings_menu() {
+  while true; do
+    local SCHOICE
+    SCHOICE=$(whiptail --title "Watchtower Einstellungen" --menu \
+      "Werte für den (Neu-)Start von llama-server:" \
+      24 80 14 \
+      "1" "Modell wählen (Scan .gguf)" \
+      "2" "Server-Binary wählen (Scan)" \
+      "3" "Host ändern (aktuell: $HOST)" \
+      "4" "Port ändern (aktuell: $PORT)" \
+      "5" "Kontextgröße ändern (aktuell: $CTX_SIZE)" \
+      "6" "Threads ändern (aktuell: $THREADS)" \
+      "7" "Aktuelle Konfiguration anzeigen" \
+      "8" "Zurück" \
+      3>&1 1>&2 2>&3)
+
+    local EXIT_STATUS=$?
+    [ $EXIT_STATUS -ne 0 ] && break
+
+    case "$SCHOICE" in
+      "1") choose_model ;;
+      "2") choose_binary ;;
+      "3") edit_host ;;
+      "4") edit_port ;;
+      "5") edit_ctx ;;
+      "6") edit_threads ;;
+      "7") show_watchdog_conf ;;
+      "8") break ;;
+      *) msg_box "Ungültige Auswahl." ;;
+    esac
+  done
 }
 
 # ---------------- Watchtower (llama_watchdog.sh) ----------------
@@ -218,7 +394,7 @@ start_watchdog() {
   fi
 
   if [ ! -f "$WATCHDOG_SCRIPT" ]; then
-    msg_box "Fehler: Watchdog-Skript nicht gefunden:\n$WATCHDOG_SCRIPT\n\nBitte llama_watchdog.sh nach \$HOME legen\nund MODEL_PATH darin setzen."
+    msg_box "Fehler: Watchdog-Skript nicht gefunden:\n$WATCHDOG_SCRIPT\n\nBitte llama_watchdog.sh nach \$HOME legen."
     return 1
   fi
 
@@ -258,15 +434,16 @@ watchtower_menu() {
   while true; do
     local WCHOICE
     WCHOICE=$(whiptail --title "Watchtower (llama-server)" --menu \
-      "Überwachung und API-Key verwalten:" \
-      22 80 12 \
+      "Überwachung, API-Key und Einstellungen verwalten:" \
+      24 80 14 \
       "1" "Watchtower AN (Server überwachen)" \
       "2" "Watchtower AUS" \
       "3" "Watchtower Status" \
       "4" "API-Key eingeben (Terminal)" \
       "5" "API-Key Status" \
       "6" "API-Key löschen" \
-      "7" "Zurück" \
+      "7" "Einstellungen (Modell, Host, Port, Kontext)" \
+      "8" "Zurück" \
       3>&1 1>&2 2>&3)
 
     local EXIT_STATUS=$?
@@ -279,7 +456,8 @@ watchtower_menu() {
       "4") set_api_key_terminal ;;
       "5") show_api_key_status ;;
       "6") delete_api_key ;;
-      "7") break ;;
+      "7") settings_menu ;;
+      "8") break ;;
       *) msg_box "Ungültige Auswahl." ;;
     esac
   done
@@ -355,7 +533,7 @@ show_status() {
   if watchdog_running; then s_wd="AN"; else s_wd="AUS"; fi
   if api_key_set; then s_key="gespeichert"; else s_key="nicht gesetzt"; fi
 
-  msg_box "Gesamtstatus:\n\nsshd: $s_ssh\ncloudflared: $s_cf\nllama-server: $s_llm\nWatchtower: $s_wd\nAPI-Key: $s_key\n\nsshd-Log: $SSHD_LOG\nCF-Log: $CF_LOG\nllama-Log: $LLAMA_LOG"
+  msg_box "Gesamtstatus:\n\nsshd: $s_ssh\ncloudflared: $s_cf\nllama-server: $s_llm\nWatchtower: $s_wd\nAPI-Key: $s_key\n\nModell: ${MODEL_PATH#$HOME/}\n$HOST:$PORT (ctx $CTX_SIZE)\n\nsshd-Log: $SSHD_LOG\nCF-Log: $CF_LOG\nllama-Log: $LLAMA_LOG"
 }
 
 # ---------------- Untermenü Netzwerk ----------------
@@ -413,7 +591,7 @@ while true; do
     "5" "llama-server stoppen" \
     "6" "llama-server neustarten (über Verwaltung)" \
     "7" "llama-server Status" \
-    "8" "Watchtower (Überwachung + API-Key)" \
+    "8" "Watchtower (Überwachung + API-Key + Einstellungen)" \
     "9" "Beenden" \
     3>&1 1>&2 2>&3)
 
