@@ -5,6 +5,7 @@
 # Dienste: sshd, cloudflared, llama.cpp (llama-server), feroxbuster
 # + Watchtower (llama_watchdog.sh): startet llama-server neu,
 #   wenn er gestoppt/abgestuerzt ist
+# + API-Key-Verwaltung für llama-server (--api-key)
 # =========================================================
 
 # --- Pfade zu deinen Scripts ---
@@ -23,6 +24,11 @@ LLAMA_DIR="$HOME/llama.cpp/build/bin"
 LLAMA_BIN="$LLAMA_DIR/llama-server"
 LLAMA_LOG="$HOME/llama-server.log"
 WATCHDOG_LOG="$HOME/llama-watchdog.log"
+
+# API-Key-Datei für llama-server (wird vom Watchdog gelesen)
+API_KEY_FILE="$HOME/.config/my-services/llama-api.key"
+
+mkdir -p "$HOME/.config/my-services"
 
 # --- Hilfsfunktionen ---
 
@@ -125,6 +131,80 @@ status_cloudflare() {
   fi
 }
 
+# ---------------- API-Key (llama-server) ----------------
+
+api_key_set() {
+  [ -f "$API_KEY_FILE" ] && [ -s "$API_KEY_FILE" ]
+}
+
+set_api_key_terminal() {
+  clear
+  echo "llama-server API-Key eingeben"
+  echo "----------------------------------------"
+  echo "Der Key wird lokal gespeichert (chmod 600) und vom"
+  echo "Watchdog beim (Neu-)Start als --api-key übergeben."
+  echo "Die Eingabe wird NICHT angezeigt."
+  echo ""
+  printf "API-Key: "
+  read -rs apikey
+  echo ""
+
+  if [ -n "$apikey" ]; then
+    printf '%s' "$apikey" > "$API_KEY_FILE"
+    chmod 600 "$API_KEY_FILE"
+    msg_box "API-Key gespeichert."
+
+    if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then
+      confirm_box "llama-server läuft noch mit dem alten Zustand.\nJetzt neu starten, damit der neue Key greift?"
+      if [ $? -eq 0 ]; then
+        pkill -f "$LLAMA_BIN" 2>/dev/null || true
+        sleep 1
+        if watchdog_running; then
+          msg_box "Server gestoppt – Watchtower startet ihn\ngleich mit dem neuen Key neu."
+        else
+          msg_box "Server gestoppt.\nStarte ihn neu (Punkt 1 oder Watchtower AN)."
+        fi
+      fi
+    fi
+  else
+    msg_box "Leere Eingabe – nichts gespeichert."
+  fi
+}
+
+show_api_key_status() {
+  if api_key_set; then
+    msg_box "API-Key ist gespeichert.\n\nDatei: $API_KEY_FILE"
+  else
+    msg_box "API-Key ist nicht gesetzt.\n\nDer Server läuft ohne Authentifizierung."
+  fi
+}
+
+delete_api_key() {
+  if ! api_key_set; then
+    msg_box "Es ist kein API-Key gespeichert."
+    return 0
+  fi
+
+  confirm_box "API-Key wirklich löschen?\n\nDer Server läuft danach ohne Authentifizierung."
+  if [ $? -eq 0 ]; then
+    rm -f "$API_KEY_FILE"
+    msg_box "API-Key gelöscht."
+
+    if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then
+      confirm_box "llama-server läuft noch mit dem alten Key.\nJetzt neu starten, damit die Änderung greift?"
+      if [ $? -eq 0 ]; then
+        pkill -f "$LLAMA_BIN" 2>/dev/null || true
+        sleep 1
+        if watchdog_running; then
+          msg_box "Server gestoppt – Watchtower startet ihn\ngleich ohne Key neu."
+        else
+          msg_box "Server gestoppt.\nStarte ihn neu (Punkt 1 oder Watchtower AN)."
+        fi
+      fi
+    fi
+  fi
+}
+
 # ---------------- Watchtower (llama_watchdog.sh) ----------------
 
 watchdog_running() {
@@ -172,6 +252,37 @@ status_watchdog() {
   else
     msg_box "Watchtower Status:\n\nAUS"
   fi
+}
+
+watchtower_menu() {
+  while true; do
+    local WCHOICE
+    WCHOICE=$(whiptail --title "Watchtower (llama-server)" --menu \
+      "Überwachung und API-Key verwalten:" \
+      22 80 12 \
+      "1" "Watchtower AN (Server überwachen)" \
+      "2" "Watchtower AUS" \
+      "3" "Watchtower Status" \
+      "4" "API-Key eingeben (Terminal)" \
+      "5" "API-Key Status" \
+      "6" "API-Key löschen" \
+      "7" "Zurück" \
+      3>&1 1>&2 2>&3)
+
+    local EXIT_STATUS=$?
+    [ $EXIT_STATUS -ne 0 ] && break
+
+    case "$WCHOICE" in
+      "1") start_watchdog ;;
+      "2") stop_watchdog ;;
+      "3") status_watchdog ;;
+      "4") set_api_key_terminal ;;
+      "5") show_api_key_status ;;
+      "6") delete_api_key ;;
+      "7") break ;;
+      *) msg_box "Ungültige Auswahl." ;;
+    esac
+  done
 }
 
 # ---------------- llama-server ----------------
@@ -236,14 +347,15 @@ start_ferox() {
 # ---------------- Gesamt-Status ----------------
 
 show_status() {
-  local s_ssh s_cf s_llm s_wd
+  local s_ssh s_cf s_llm s_wd s_key
 
   if pgrep -x sshd >/dev/null 2>&1; then s_ssh="LÄUFT"; else s_ssh="GESTOPPT"; fi
   if pgrep -f "cloudflared tunnel run" >/dev/null 2>&1; then s_cf="LÄUFT"; else s_cf="GESTOPPT"; fi
   if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then s_llm="LÄUFT"; else s_llm="GESTOPPT"; fi
   if watchdog_running; then s_wd="AN"; else s_wd="AUS"; fi
+  if api_key_set; then s_key="gespeichert"; else s_key="nicht gesetzt"; fi
 
-  msg_box "Gesamtstatus:\n\nsshd: $s_ssh\ncloudflared: $s_cf\nllama-server: $s_llm\nWatchtower: $s_wd\n\nsshd-Log: $SSHD_LOG\nCF-Log: $CF_LOG\nllama-Log: $LLAMA_LOG"
+  msg_box "Gesamtstatus:\n\nsshd: $s_ssh\ncloudflared: $s_cf\nllama-server: $s_llm\nWatchtower: $s_wd\nAPI-Key: $s_key\n\nsshd-Log: $SSHD_LOG\nCF-Log: $CF_LOG\nllama-Log: $LLAMA_LOG"
 }
 
 # ---------------- Untermenü Netzwerk ----------------
@@ -301,10 +413,8 @@ while true; do
     "5" "llama-server stoppen" \
     "6" "llama-server neustarten (über Verwaltung)" \
     "7" "llama-server Status" \
-    "8" "Watchtower AN (llama-server überwachen)" \
-    "9" "Watchtower AUS" \
-    "10" "Watchtower Status" \
-    "11" "Beenden" \
+    "8" "Watchtower (Überwachung + API-Key)" \
+    "9" "Beenden" \
     3>&1 1>&2 2>&3)
 
   EXIT_STATUS=$?
@@ -318,10 +428,8 @@ while true; do
     "5") stop_llama_server ;;
     "6") restart_llama_server ;;
     "7") status_llama_server ;;
-    "8") start_watchdog ;;
-    "9") stop_watchdog ;;
-    "10") status_watchdog ;;
-    "11") break ;;
+    "8") watchtower_menu ;;
+    "9") break ;;
     *) msg_box "Ungültige Auswahl." ;;
   esac
 done
