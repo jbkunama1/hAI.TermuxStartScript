@@ -1,0 +1,260 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+# =========================================================
+# LLM Control Center (Termux + whiptail)
+# Dienste: sshd, cloudflared, llama.cpp (llama-server), feroxbuster
+# =========================================================
+
+# --- Pfade zu deinen Scripts ---
+LLAMA_MGR="$HOME/start-llama-server.sh" # dein großes Management-Script
+FEROX_SCRIPT="$HOME/feroxbuster_start_v2.sh" # ggf. anpassen: feroxbuster_start_v2.sh
+
+SSHD_LOG="$HOME/sshd.log"
+CF_LOG="$HOME/cloudflared.log"
+
+# Cloudflare-Tunnel-Befehl (aus start_cl_llama-6.sh)
+# HINWEIS: Token hier lokal eintragen (nicht ins Repo committen!)
+CF_CMD="cloudflared tunnel run --token DEIN_CLOUDFLARE_TOKEN_HIER"
+
+LLAMA_DIR="$HOME/llama.cpp/build/bin"
+LLAMA_BIN="$LLAMA_DIR/llama-server"
+LLAMA_LOG="$HOME/llama-server.log"
+
+# --- Hilfsfunktionen ---
+
+msg_box() {
+  local text="$1"
+  whiptail --title "LLM Control Center" --msgbox "$text" 12 70
+}
+
+confirm_box() {
+  local text="$1"
+  whiptail --title "Bestätigen" --yesno "$text" 10 70
+}
+
+# ---------------- sshd ----------------
+
+start_sshd() {
+  if pgrep -x sshd >/dev/null 2>&1; then
+    msg_box "sshd läuft bereits."
+    return 0
+  fi
+
+  termux-wake-lock 2>/dev/null || true
+  nohup sshd -D >"$SSHD_LOG" 2>&1 &
+  sleep 1
+
+  if pgrep -x sshd >/dev/null 2>&1; then
+    msg_box "sshd gestartet.\nLog: $SSHD_LOG"
+  else
+    msg_box "Fehler: sshd konnte nicht gestartet werden."
+  fi
+}
+
+stop_sshd() {
+  if ! pgrep -x sshd >/dev/null 2>&1; then
+    msg_box "sshd läuft nicht."
+    return 0
+  fi
+
+  confirm_box "sshd wirklich stoppen?"
+  if [ $? -eq 0 ]; then
+    pkill -x sshd 2>/dev/null || true
+    msg_box "sshd gestoppt."
+  fi
+}
+
+restart_sshd() {
+  stop_sshd
+  start_sshd
+}
+
+status_sshd() {
+  if pgrep -x sshd >/dev/null 2>&1; then
+    msg_box "sshd Status:\n\nLÄUFT\n\nLog: $SSHD_LOG"
+  else
+    msg_box "sshd Status:\n\nGESTOPPT\n\nLog: $SSHD_LOG"
+  fi
+}
+
+# ---------------- cloudflared ----------------
+
+start_cloudflare() {
+  if pgrep -f "cloudflared tunnel run" >/dev/null 2>&1; then
+    msg_box "cloudflared läuft bereits."
+    return 0
+  fi
+
+  nohup $CF_CMD >"$CF_LOG" 2>&1 &
+  sleep 2
+
+  if pgrep -f "cloudflared tunnel run" >/dev/null 2>&1; then
+    msg_box "cloudflared Tunnel gestartet.\nLog: $CF_LOG"
+  else
+    msg_box "Fehler: cloudflared konnte nicht gestartet werden."
+  fi
+}
+
+stop_cloudflare() {
+  if ! pgrep -f "cloudflared tunnel run" >/dev/null 2>&1; then
+    msg_box "cloudflared läuft nicht."
+    return 0
+  fi
+
+  confirm_box "cloudflared Tunnel wirklich stoppen?"
+  if [ $? -eq 0 ]; then
+    pkill -f "cloudflared tunnel run" 2>/dev/null || true
+    msg_box "cloudflared gestoppt."
+  fi
+}
+
+restart_cloudflare() {
+  stop_cloudflare
+  start_cloudflare
+}
+
+status_cloudflare() {
+  if pgrep -f "cloudflared tunnel run" >/dev/null 2>&1; then
+    msg_box "cloudflared Status:\n\nLÄUFT\n\nLog: $CF_LOG"
+  else
+    msg_box "cloudflared Status:\n\nGESTOPPT\n\nLog: $CF_LOG"
+  fi
+}
+
+# ---------------- llama-server ----------------
+
+start_llama_mgr() {
+  if [ ! -x "$LLAMA_MGR" ]; then
+    msg_box "Fehler: llama.cpp-Verwaltung nicht ausführbar:\n$LLAMA_MGR"
+    return 1
+  fi
+
+  bash "$LLAMA_MGR"
+}
+
+stop_llama_server() {
+  if ! pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then
+    msg_box "llama-server läuft nicht."
+    return 0
+  fi
+
+  confirm_box "llama-server wirklich stoppen?"
+  if [ $? -eq 0 ]; then
+    pkill -f "$LLAMA_BIN" 2>/dev/null || true
+    termux-wake-unlock 2>/dev/null || true
+    msg_box "llama-server gestoppt."
+  fi
+}
+
+restart_llama_server() {
+  stop_llama_server
+  start_llama_mgr
+}
+
+status_llama_server() {
+  if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then
+    msg_box "llama-server Status:\n\nLÄUFT\n\nLog: $LLAMA_LOG"
+  else
+    msg_box "llama-server Status:\n\nGESTOPPT\n\nLog: $LLAMA_LOG"
+  fi
+}
+
+# ---------------- feroxbuster ----------------
+
+start_ferox() {
+  local script="$FEROX_SCRIPT"
+  if [ ! -x "$script" ]; then
+    msg_box "Fehler: feroxbuster-Script nicht ausführbar:\n$script"
+    return 1
+  fi
+
+  bash "$script"
+}
+
+# ---------------- Gesamt-Status ----------------
+
+show_status() {
+  local s_ssh s_cf s_llm
+
+  if pgrep -x sshd >/dev/null 2>&1; then s_ssh="LÄUFT"; else s_ssh="GESTOPPT"; fi
+  if pgrep -f "cloudflared tunnel run" >/dev/null 2>&1; then s_cf="LÄUFT"; else s_cf="GESTOPPT"; fi
+  if pgrep -f "$LLAMA_BIN" >/dev/null 2>&1; then s_llm="LÄUFT"; else s_llm="GESTOPPT"; fi
+
+  msg_box "Gesamtstatus:\n\nsshd: $s_ssh\ncloudflared: $s_cf\nllama-server: $s_llm\n\nsshd-Log: $SSHD_LOG\nCF-Log: $CF_LOG\nllama-Log: $LLAMA_LOG"
+}
+
+# ---------------- Untermenü Netzwerk ----------------
+
+network_menu() {
+  while true; do
+    local NCHOICE
+    NCHOICE=$(whiptail --title "Netzwerk (sshd & cloudflared)" --menu \
+      "Verwalte SSH und Cloudflare-Tunnel:" \
+      20 80 10 \
+      "1" "sshd starten" \
+      "2" "sshd stoppen" \
+      "3" "sshd neustarten" \
+      "4" "sshd Status" \
+      "5" "cloudflared starten" \
+      "6" "cloudflared stoppen" \
+      "7" "cloudflared neustarten" \
+      "8" "cloudflared Status" \
+      "9" "Zurück" \
+      3>&1 1>&2 2>&3)
+
+    local EXIT_STATUS=$?
+    [ $EXIT_STATUS -ne 0 ] && break
+
+    case "$NCHOICE" in
+      "1") start_sshd ;;
+      "2") stop_sshd ;;
+      "3") restart_sshd ;;
+      "4") status_sshd ;;
+      "5") start_cloudflare ;;
+      "6") stop_cloudflare ;;
+      "7") restart_cloudflare ;;
+      "8") status_cloudflare ;;
+      "9") break ;;
+      *) msg_box "Ungültige Auswahl." ;;
+    esac
+  done
+}
+
+# --- Kein automatischer Start von sshd/cloudflared (Option 1) ---
+# dein bestehender Autostart bleibt aktiv
+# start_sshd
+# start_cloudflare
+
+# ---------------- Hauptmenü ----------------
+
+while true; do
+  CHOICE=$(whiptail --title "LLM Control Center" --menu \
+    "Verwalte Dienste und Tools:" \
+    22 80 12 \
+    "1" "llama.cpp Verwaltung öffnen (start-llama-server-3.sh)" \
+    "2" "feroxbuster starten" \
+    "3" "Gesamtstatus anzeigen" \
+    "4" "Netzwerk: sshd & cloudflared" \
+    "5" "llama-server stoppen" \
+    "6" "llama-server neustarten (über Verwaltung)" \
+    "7" "llama-server Status" \
+    "8" "Beenden" \
+    3>&1 1>&2 2>&3)
+
+  EXIT_STATUS=$?
+  [ $EXIT_STATUS -ne 0 ] && break
+
+  case "$CHOICE" in
+    "1") start_llama_mgr ;;
+    "2") start_ferox ;;
+    "3") show_status ;;
+    "4") network_menu ;;
+    "5") stop_llama_server ;;
+    "6") restart_llama_server ;;
+    "7") status_llama_server ;;
+    "8") break ;;
+    *) msg_box "Ungültige Auswahl." ;;
+  esac
+done
+
+exit 0
